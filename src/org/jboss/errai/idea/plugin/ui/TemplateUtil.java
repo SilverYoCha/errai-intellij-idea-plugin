@@ -16,26 +16,15 @@
 
 package org.jboss.errai.idea.plugin.ui;
 
-import static com.intellij.psi.search.GlobalSearchScope.projectScope;
-
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Multimap;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.roots.ProjectRootManager;
 import com.intellij.openapi.util.Key;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.psi.JavaPsiFacade;
-import com.intellij.psi.PsiAnnotation;
-import com.intellij.psi.PsiClass;
-import com.intellij.psi.PsiDirectory;
-import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiFile;
-import com.intellij.psi.PsiLiteralExpression;
-import com.intellij.psi.PsiManager;
-import com.intellij.psi.PsiModifierList;
-import com.intellij.psi.PsiNameValuePair;
-import com.intellij.psi.search.FilenameIndex;
+import com.intellij.psi.*;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.search.searches.ClassInheritorsSearch;
 import com.intellij.psi.util.PsiUtil;
@@ -47,22 +36,13 @@ import org.jboss.errai.idea.plugin.ui.model.ConsolidateDataFieldElementResult;
 import org.jboss.errai.idea.plugin.ui.model.DataFieldCacheHolder;
 import org.jboss.errai.idea.plugin.ui.model.TemplateExpression;
 import org.jboss.errai.idea.plugin.ui.model.TemplateMetaData;
-import org.jboss.errai.idea.plugin.util.AnnotationSearchResult;
-import org.jboss.errai.idea.plugin.util.AnnotationValueElement;
-import org.jboss.errai.idea.plugin.util.CacheProvider;
-import org.jboss.errai.idea.plugin.util.Types;
-import org.jboss.errai.idea.plugin.util.Util;
+import org.jboss.errai.idea.plugin.util.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+
+import static com.intellij.psi.search.GlobalSearchScope.projectScope;
 
 /**
  * @author Mike Brock
@@ -392,7 +372,13 @@ public class TemplateUtil {
       fileByRelativePath = null;
     }
 
-    // if we didn't find the file in the current container,
+    // locate file in the current module for /absolute/path/Template.html
+    VirtualFile sourceRootForFile = ProjectRootManager.getInstance(project).getFileIndex().getSourceRootForFile(containingFile.getVirtualFile());
+    if (sourceRootForFile != null) {
+      fileByRelativePath = sourceRootForFile.findFileByRelativePath(fileName);
+    }
+
+      // if we didn't find the file in the current container,
     // and this is a maven project, it might located in the resources folder
     if (fileByRelativePath == null) {
       // see if this is a maven project  check for a pom.xml in the root folder
