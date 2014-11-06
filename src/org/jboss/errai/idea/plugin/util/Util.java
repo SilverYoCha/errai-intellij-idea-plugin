@@ -557,9 +557,14 @@ public class Util {
   }
 
   public static boolean isInsideProjectSources(AnActionEvent event) {
+    if (event.getProject() == null) {
+      return false;    
+    }
     ProjectFileIndex projectFileIndex = ProjectRootManager.getInstance(event.getProject()).getFileIndex();
     final IdeView view = event.getData(DataKeys.IDE_VIEW);
-
+    if (view == null) {
+      return false;    
+    }
     for (PsiDirectory dir : view.getDirectories()) {
       if (projectFileIndex.isInSourceContent(dir.getVirtualFile()) && JavaDirectoryService.getInstance().getPackage(dir) != null) {
         return true;
