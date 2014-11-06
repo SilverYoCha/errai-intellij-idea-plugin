@@ -16,29 +16,19 @@
 
 package org.jboss.errai.idea.plugin.rpc.inspection;
 
-import static org.jboss.errai.idea.plugin.util.Util.typeIsAssignableFrom;
-
 import com.intellij.codeHighlighting.HighlightDisplayLevel;
 import com.intellij.codeInsight.daemon.GroupNames;
 import com.intellij.codeInspection.BaseJavaLocalInspectionTool;
 import com.intellij.codeInspection.ProblemsHolder;
 import com.intellij.openapi.project.Project;
-import com.intellij.psi.JavaElementVisitor;
-import com.intellij.psi.JavaPsiFacade;
-import com.intellij.psi.PsiClass;
-import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiElementVisitor;
-import com.intellij.psi.PsiExpression;
-import com.intellij.psi.PsiMethod;
-import com.intellij.psi.PsiMethodCallExpression;
-import com.intellij.psi.PsiParameter;
-import com.intellij.psi.PsiReferenceExpression;
-import com.intellij.psi.PsiType;
+import com.intellij.psi.*;
 import com.intellij.psi.search.GlobalSearchScope;
 import org.jboss.errai.idea.plugin.util.Types;
 import org.jboss.errai.idea.plugin.util.Util;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
+
+import static org.jboss.errai.idea.plugin.util.Util.typeIsAssignableFrom;
 
 /**
  * @author Mike Brock
@@ -213,6 +203,9 @@ public class RpcRemoteCallbackInspection extends BaseJavaLocalInspectionTool {
         final PsiParameter[] parameters = psiMethod.getParameterList().getParameters();
 
         for (int i = 0; i < parameters.length; i++) {
+          if (expressionTypes[i] == null) {
+              continue;
+          }
           final String s = Util.boxedType(expressionTypes[i].getCanonicalText());
           final PsiClass psiClass = getPsiClass(project, parameters[i].getType());
           if (!typeIsAssignableFrom(psiClass, s)) {
