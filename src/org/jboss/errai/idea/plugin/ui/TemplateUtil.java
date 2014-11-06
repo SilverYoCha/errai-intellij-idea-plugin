@@ -372,10 +372,12 @@ public class TemplateUtil {
       fileByRelativePath = null;
     }
 
-    // locate file in the current module for /absolute/path/Template.html
-    VirtualFile sourceRootForFile = ProjectRootManager.getInstance(project).getFileIndex().getSourceRootForFile(containingFile.getVirtualFile());
-    if (sourceRootForFile != null) {
-      fileByRelativePath = sourceRootForFile.findFileByRelativePath(fileName);
+    if (fileByRelativePath == null) {
+      // locate file in the current module for /absolute/path/Template.html
+      VirtualFile sourceRootForFile = ProjectRootManager.getInstance(project).getFileIndex().getSourceRootForFile(containingFile.getVirtualFile());
+      if (sourceRootForFile != null) {
+        fileByRelativePath = sourceRootForFile.findFileByRelativePath(fileName);
+      }
     }
 
       // if we didn't find the file in the current container,
