@@ -20,14 +20,13 @@ import com.google.common.collect.Multimap;
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer;
 import com.intellij.codeInsight.lookup.LookupElementBuilder;
 import com.intellij.openapi.project.Project;
-import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiElementResolveResult;
-import com.intellij.psi.PsiReferenceBase;
-import com.intellij.psi.ResolveResult;
+import com.intellij.psi.*;
+import com.intellij.psi.impl.source.resolve.ResolveCache;
 import com.intellij.psi.impl.source.xml.XmlAttributeImpl;
 import com.intellij.psi.xml.XmlAttribute;
 import com.intellij.psi.xml.XmlFile;
 import com.intellij.util.IncorrectOperationException;
+import com.intellij.util.containers.ContainerUtil;
 import org.jboss.errai.idea.plugin.ui.TemplateDataField;
 import org.jboss.errai.idea.plugin.ui.TemplateUtil;
 import org.jboss.errai.idea.plugin.ui.model.TemplateMetaData;
@@ -40,13 +39,12 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 
 /**
  * @author Mike Brock
  */
-public class XmlDatafieldReference extends PsiReferenceBase<PsiElement> {
+public class XmlDatafieldReference extends PsiReferenceBase<PsiElement> implements PsiPolyVariantReference {
   public XmlDatafieldReference(XmlAttribute element, boolean soft) {
     super(element, soft);
   }
@@ -110,21 +108,47 @@ public class XmlDatafieldReference extends PsiReferenceBase<PsiElement> {
   @Nullable
   @Override
   public PsiElement resolve() {
-    final XmlFile xmlFile = getXmlFile();
-    final Collection<TemplateMetaData> templateOwners = TemplateUtil.getTemplateOwners(xmlFile);
-    for (TemplateMetaData metaData : templateOwners) {
-      final Collection<AnnotationSearchResult> allAnnotatedElements =
-          Util.findAllAnnotatedElements(metaData.getTemplateClass(), Types.DATAFIELD);
-      for (AnnotationSearchResult element : allAnnotatedElements) {
-        final AnnotationValueElement annotationValueElement =
-            Util.getValueStringFromAnnotationWithDefault(element.getAnnotation());
-        if (annotationValueElement.getValue().equals(((XmlAttribute) getElement()).getValue())) {
-          return annotationValueElement.getLogicalElement();
-        }
-      }
-    }
+    final ResolveResult[] resolveResults = multiResolve(false);
+    return resolveResults.length == 1 ? (resolveResults[0]).getElement() : null;
+  }
 
-    return null;
+  @NotNull
+  @Override
+  public ResolveResult[] multiResolve(boolean incompleteCode) {
+      return ResolveCache.getInstance(myElement.getContainingFile().getProject())
+              .resolveWithCaching(this, MyResolver.INSTANCE, false, incompleteCode, getXmlFile());           
+  }
+
+  private static class MyResolver implements ResolveCache.PolyVariantResolver<XmlDatafieldReference> {
+  static final MyResolver INSTANCE = new MyResolver();
+
+    @NotNull
+    public ResolveResult[] resolve(@NotNull XmlDatafieldReference xmlDatafieldReference, boolean incompleteCode) {
+      final List<ResolveResult> result = new ArrayList<ResolveResult>();
+      final XmlFile xmlFile = xmlDatafieldReference.getXmlFile();
+      final Collection<TemplateMetaData> templateOwners = TemplateUtil.getTemplateOwners(xmlFile);
+      final String dataFieldName = ((XmlAttribute) xmlDatafieldReference.getElement()).getValue();
+      for (TemplateMetaData metaData : templateOwners) {
+        if (dataFieldName != null) {
+          if (!metaData.getTemplateExpression().hasRootNode() || dataFieldName.equals(metaData.getTemplateExpression().getRootNode())) {
+            result.add(new PsiElementResolveResult(metaData.getTemplateClass()));
+          }
+        }
+        final Collection<AnnotationSearchResult> allAnnotatedElements =
+              Util.findAllAnnotatedElements(metaData.getTemplateClass(), Types.DATAFIELD);
+        for (AnnotationSearchResult element : allAnnotatedElements) {
+          final AnnotationValueElement annotationValueElement = Util.getValueStringFromAnnotationWithDefault(element.getAnnotation());
+          if (annotationValueElement.getValue().equals(dataFieldName)) {
+            result.add(new PsiElementResolveResult(annotationValueElement.getLogicalElement()));
+          }          
+        }
+      }      
+      // unknown template or a different XML file
+      if (templateOwners.size() == 0) {
+        result.add(new PsiElementResolveResult(xmlDatafieldReference.getElement()));
+      }
+      return ContainerUtil.toArray(result, new ResolveResult[result.size()]);
+    }
   }
 
   @NotNull
