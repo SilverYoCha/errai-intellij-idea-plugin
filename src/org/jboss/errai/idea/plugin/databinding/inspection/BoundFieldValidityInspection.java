@@ -18,31 +18,15 @@ package org.jboss.errai.idea.plugin.databinding.inspection;
 
 import com.intellij.codeHighlighting.HighlightDisplayLevel;
 import com.intellij.codeInsight.daemon.GroupNames;
-import com.intellij.codeInspection.BaseJavaLocalInspectionTool;
-import com.intellij.codeInspection.LocalQuickFix;
-import com.intellij.codeInspection.ProblemDescriptor;
-import com.intellij.codeInspection.ProblemHighlightType;
-import com.intellij.codeInspection.ProblemsHolder;
+import com.intellij.codeInspection.*;
 import com.intellij.openapi.project.Project;
-import com.intellij.psi.JavaElementVisitor;
-import com.intellij.psi.JavaPsiFacade;
-import com.intellij.psi.PsiAnnotation;
-import com.intellij.psi.PsiAnnotationMemberValue;
-import com.intellij.psi.PsiClass;
-import com.intellij.psi.PsiDirectory;
-import com.intellij.psi.PsiElementVisitor;
-import com.intellij.psi.PsiNameValuePair;
-import com.intellij.psi.PsiReference;
+import com.intellij.psi.*;
 import com.intellij.psi.util.PsiUtil;
 import org.jboss.errai.idea.plugin.databinding.DataBindUtil;
 import org.jboss.errai.idea.plugin.databinding.model.BindabilityValidation;
 import org.jboss.errai.idea.plugin.databinding.model.BoundMetaData;
 import org.jboss.errai.idea.plugin.databinding.model.PropertyValidation;
-import org.jboss.errai.idea.plugin.util.AnnotationSearchResult;
-import org.jboss.errai.idea.plugin.util.ExpressionErrorReference;
-import org.jboss.errai.idea.plugin.util.FileTemplateUtil;
-import org.jboss.errai.idea.plugin.util.Types;
-import org.jboss.errai.idea.plugin.util.Util;
+import org.jboss.errai.idea.plugin.util.*;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
 
@@ -142,10 +126,12 @@ public class BoundFieldValidityInspection extends BaseJavaLocalInspectionTool {
         if (unresolvedParent == null) {
           return;
         }
-
-        holder.registerProblem(Util.getAnnotationMemberValue(psiAnnotation, "property"),
-            "The property '" + validation.getUnresolvedPropertyElement() + "' is invalid because its parent bean "
-                + "(" + unresolvedParent.getQualifiedName() + ") is not bindable.");
+        PsiElement psiElement = Util.getAnnotationMemberValue(psiAnnotation, "property");
+        if (psiElement != null) {
+          holder.registerProblem(psiElement,
+                  "The property '" + validation.getUnresolvedPropertyElement() + "' is invalid because its parent bean "
+                        + "(" + unresolvedParent.getQualifiedName() + ") is not bindable.");
+        }
       }
       else if (validation.hasBindabilityProblem()) {
         final BindabilityValidation bindabilityValidation = validation.getBindabilityValidation();
