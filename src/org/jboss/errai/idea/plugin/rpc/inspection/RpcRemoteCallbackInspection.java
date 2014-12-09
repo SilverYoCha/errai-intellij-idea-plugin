@@ -139,7 +139,7 @@ public class RpcRemoteCallbackInspection extends BaseJavaLocalInspectionTool {
     }
     PsiType remoteCallbackPsiType = getRemoteCallbackPsiType(expression);
     if (remoteCallbackPsiType == null) {
-      return null;
+      return null;           
     }
     return Util.getErasedTypeParam(expression.getProject(), remoteCallbackPsiType.getCanonicalText());
   }
