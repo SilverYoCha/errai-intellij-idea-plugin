@@ -23,28 +23,7 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.ProjectFileIndex;
 import com.intellij.openapi.roots.ProjectRootManager;
 import com.intellij.openapi.util.Key;
-import com.intellij.psi.JavaDirectoryService;
-import com.intellij.psi.JavaPsiFacade;
-import com.intellij.psi.PsiAnnotation;
-import com.intellij.psi.PsiAnnotationMemberValue;
-import com.intellij.psi.PsiAnnotationParameterList;
-import com.intellij.psi.PsiClass;
-import com.intellij.psi.PsiClassObjectAccessExpression;
-import com.intellij.psi.PsiClassType;
-import com.intellij.psi.PsiDirectory;
-import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiExpression;
-import com.intellij.psi.PsiField;
-import com.intellij.psi.PsiFile;
-import com.intellij.psi.PsiInvalidElementAccessException;
-import com.intellij.psi.PsiMethod;
-import com.intellij.psi.PsiModifierList;
-import com.intellij.psi.PsiModifierListOwner;
-import com.intellij.psi.PsiNameValuePair;
-import com.intellij.psi.PsiParameter;
-import com.intellij.psi.PsiParameterList;
-import com.intellij.psi.PsiType;
-import com.intellij.psi.PsiVariable;
+import com.intellij.psi.*;
 import com.intellij.psi.search.FilenameIndex;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.util.PsiUtil;
@@ -301,8 +280,7 @@ public class Util {
       errorElement = annotation;
     }
     else {
-      final String text = attributes[0].getText();
-      value = text.substring(1, text.length() - 1);
+      value = getStringValueOfElement(attributes[0].getValue());
       errorElement = attributes[0];
     }
 
@@ -599,4 +577,44 @@ public class Util {
     return type;
   }
 
+  public static String getStringValueOfElement(PsiElement psiElement) {
+
+    String result = "";
+
+    if ((psiElement instanceof PsiBinaryExpression)) {
+
+      final PsiBinaryExpression binaryExpression = (PsiBinaryExpression) psiElement;
+      if (binaryExpression == null) {
+        return result;
+      }
+      for(PsiExpression psiExpression : binaryExpression.getOperands()) {
+        result += getStringValueOfElement(psiExpression);
+      }
+    } else if ((psiElement instanceof PsiReferenceExpression)) {
+
+      final PsiReferenceExpression referenceExpression = (PsiReferenceExpression) psiElement;
+      if (referenceExpression == null) {
+        return result;
+      }
+      PsiElement field = referenceExpression.resolve();
+      if (field instanceof PsiField) {
+        Object value = ((PsiField) field).computeConstantValue();
+        if (value instanceof  String) {
+          result = (String) value;
+        }
+      }
+
+    } else if ((psiElement instanceof PsiLiteralExpression)) {
+
+      final PsiLiteralExpression literalExpression = (PsiLiteralExpression) psiElement;
+      if (literalExpression == null) {
+        return result;
+      }
+
+      String text = literalExpression.getText().replace(INTELLIJ_MAGIC_STRING, "");
+      result = text.substring(1, text.length() - 1);
+    }
+
+    return result;
+  }
 }

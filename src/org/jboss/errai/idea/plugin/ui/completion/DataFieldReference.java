@@ -60,8 +60,10 @@ public class DataFieldReference extends PsiReferenceBase<PsiLiteralExpression> {
         final XmlAttribute attribute;
         if (tag.getAttribute(TemplateUtil.DATA_FIELD_TAG_ATTRIBUTE) != null) {
           attribute = tag.getAttribute(TemplateUtil.DATA_FIELD_TAG_ATTRIBUTE);
-        } else {
+        } else if (tag.getAttribute(TemplateUtil.ID_ATTRIBUTE) != null) {
           attribute = tag.getAttribute(TemplateUtil.ID_ATTRIBUTE);
+        } else {
+          attribute = tag.getAttribute(TemplateUtil.CLASS_ATTRIBUTE);
         }
 
         if (attribute != null) {

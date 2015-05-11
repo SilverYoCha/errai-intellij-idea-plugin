@@ -50,6 +50,7 @@ import static com.intellij.psi.search.GlobalSearchScope.projectScope;
 public class TemplateUtil {
   public static final String DATA_FIELD_TAG_ATTRIBUTE = "data-field";
   public static final String ID_ATTRIBUTE = "id";
+  public static final String CLASS_ATTRIBUTE = "class";
 
   private static final Key<DataFieldCacheHolder> dataFieldsCacheKey = Key.create("dataFieldsCache");
 
@@ -219,21 +220,32 @@ public class TemplateUtil {
       return references;
     }
 
-    if (includeRoot
-        && rootTag.getAttribute(DATA_FIELD_TAG_ATTRIBUTE) != null || rootTag.getAttribute(ID_ATTRIBUTE) != null) {
+    if (includeRoot && rootTag.getAttribute(DATA_FIELD_TAG_ATTRIBUTE) != null ||
+        rootTag.getAttribute(ID_ATTRIBUTE) != null ||
+        rootTag.getAttribute(CLASS_ATTRIBUTE) != null) {
       final XmlAttribute attribute;
       if (rootTag.getAttribute(DATA_FIELD_TAG_ATTRIBUTE) != null) {
         attribute = rootTag.getAttribute(DATA_FIELD_TAG_ATTRIBUTE);
-      } else {
+      } else if (rootTag.getAttribute(ID_ATTRIBUTE) != null) {
         attribute = rootTag.getAttribute(ID_ATTRIBUTE);
+      } else {
+        attribute = rootTag.getAttribute(CLASS_ATTRIBUTE);
       }
 
       if (attribute == null) {
         return references;
       }
 
-      final String value = attribute.getValue();
-      references.put(value, new TemplateDataField(rootTag, value));
+      final String values = attribute.getValue();
+      if (values != null) {
+        StringTokenizer tokenizer = new StringTokenizer(values, " ");
+        while (tokenizer.hasMoreTokens()) {
+          String value = tokenizer.nextToken();
+          if (value != null && value.trim().length() > 0) {
+            references.put(value, new TemplateDataField(rootTag, value));
+          }
+        }
+      }
     }
     _findDataFieldTags(references, rootTag);
     return references;
@@ -260,12 +272,23 @@ public class TemplateUtil {
   private static void _scanTag(Multimap<String, TemplateDataField> foundTags, XmlTag xmlTag) {
     _scanTag(foundTags, xmlTag, DATA_FIELD_TAG_ATTRIBUTE);
     _scanTag(foundTags, xmlTag, ID_ATTRIBUTE);
+    _scanTag(foundTags, xmlTag, CLASS_ATTRIBUTE);
   }
 
   private static void _scanTag(Multimap<String, TemplateDataField> foundTags, XmlTag xmlTag, String dataFieldTagAttribute) {
     XmlAttribute xmlAttribute = xmlTag.getAttribute(dataFieldTagAttribute);
     if (xmlAttribute != null) {
-      foundTags.put(xmlAttribute.getValue(), new TemplateDataField(xmlTag, xmlAttribute.getValue()));
+
+      final String values = xmlAttribute.getValue();
+      if (values != null) {
+        StringTokenizer tokenizer = new StringTokenizer(values, " ");
+        while (tokenizer.hasMoreTokens()) {
+          String value = tokenizer.nextToken();
+          if (value != null && value.trim().length() > 0) {
+            foundTags.put(value, new TemplateDataField(xmlTag, value));
+          }
+        }
+      }
     }
   }
 
@@ -334,19 +357,11 @@ public class TemplateUtil {
     final String templateName;
     if (attributes.length == 0) {
       templateName = templateClass.getName() + ".html";
-    }
-    else {
-      if (!(attributes[0].getValue() instanceof PsiLiteralExpression)) {
+    } else {
+      templateName = Util.getStringValueOfElement(attributes[0].getValue());
+      if (templateName.length() == 0) {
         return null;
       }
-
-      final PsiLiteralExpression literalExpression = (PsiLiteralExpression) attributes[0].getValue();
-      if (literalExpression == null) {
-        return null;
-      }
-
-      String text = literalExpression.getText().replace(Util.INTELLIJ_MAGIC_STRING, "");
-      templateName = text.substring(1, text.length() - 1);
     }
 
     final PsiFile containingFile = templateClass.getContainingFile().getOriginalFile();
@@ -374,7 +389,8 @@ public class TemplateUtil {
 
     if (fileByRelativePath == null) {
       // locate file in the current module for /absolute/path/Template.html
-      VirtualFile sourceRootForFile = ProjectRootManager.getInstance(project).getFileIndex().getSourceRootForFile(containingFile.getVirtualFile());
+      VirtualFile sourceRootForFile = ProjectRootManager.getInstance(project).getFileIndex().getSourceRootForFile(
+          containingFile.getVirtualFile());
       if (sourceRootForFile != null) {
         fileByRelativePath = sourceRootForFile.findFileByRelativePath(fileName);
       }
@@ -493,8 +509,7 @@ public class TemplateUtil {
     final List<TemplateMetaData> templateOwners = new ArrayList<TemplateMetaData>();
     final PsiClass psiClass = JavaPsiFacade.getInstance(
         file.getProject()).findClass(Types.GWT_COMPOSITE,
-        GlobalSearchScope.allScope(file.getProject())
-    );
+        GlobalSearchScope.allScope(file.getProject()));
 
     if (psiClass == null) {
       return Collections.emptyList();

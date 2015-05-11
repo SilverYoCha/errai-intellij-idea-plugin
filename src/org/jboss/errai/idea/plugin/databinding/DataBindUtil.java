@@ -22,7 +22,9 @@ import static com.intellij.psi.search.searches.AnnotatedElementsSearch.searchPsi
 import static com.intellij.psi.search.searches.AnnotatedElementsSearch.searchPsiParameters;
 
 import com.intellij.lang.properties.IProperty;
+import com.intellij.lang.properties.PropertiesImplUtil;
 import com.intellij.lang.properties.PropertiesUtil;
+import com.intellij.lang.properties.psi.PropertiesFile;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Key;
 import com.intellij.psi.JavaPsiFacade;
@@ -382,8 +384,16 @@ public class DataBindUtil {
     final Set<String> bindableTypes = new HashSet<String>();
 
     for (PsiFile file : Util.getAllErraiAppProperties(project)) {
-      for (IProperty property
-          : PropertiesUtil.findAllProperties(project, PropertiesUtil.getResourceBundle(file), "errai.ui.bindableTypes")) {
+      if (file == null) {
+        continue;
+      }
+      PropertiesFile propertiesFile = PropertiesImplUtil.getPropertiesFile(file);
+      if (propertiesFile == null) {
+        continue;
+      }
+      for (IProperty property : PropertiesUtil
+          .findAllProperties(project, propertiesFile.getResourceBundle(),
+              "errai.ui.bindableTypes")) {
         final String value = property.getValue();
         if (value != null) {
           for (String s : value.split("\\s+")) {
